@@ -1,0 +1,157 @@
+'*  Name    : Fan Monitoring by Hall Effect Sensor PIC16F1619   *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/20/2020                                         *
+'*  Version : 1.2                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+  #CONFIG; FUSSES 
+    __config _CONFIG1,  _FOSC_INTOSC & _PWRTE_ON & _MCLRE_OFF & _CP_OFF & _BOREN_ON & _CLKOUTEN_OFF
+    __config _CONFIG2,  _WRT_OFF & _PPS1WAY_OFF & _ZCD_OFF & _PLLEN_OFF & _STVREN_ON & _BORV_LO & _LVP_OFF
+    __config _CONFIG3,  _WDTCPS_WDTCPS4 & _WDTE_ON & _WDTCWS_WDTCWS100 & _WDTCCS_LFINTOSC
+  #ENDCONFIG
+;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY    
+;--PORTA--
+TRISA = %00111000; RA3:RA4:RA5 AS INPUT 
+ANSELA = 0; ALL PINS ARE DIGITAL
+OPTION_REG.7=0; PULL-UPS ENABLED
+WPUA = %00011000; RA2:RA4 ENABLED PULL UPS
+;--PORTB--
+TRISB = 0; 
+ANSELB = 0; ALL PINS ARE DIGITAL
+WPUB = 0; RB4:RA5:RB6 ENABLED PULL UPS
+LATB = 0
+;--PORTC--
+TRISC = %00100000; RA5:RA6:RA7 AS INPUT
+ANSELC = 0; RA6:RA7 ARE ANALOG
+WPUC = 0; PULL UPS DISABLED
+LATC = 0;
+;---
+PORTA = 0;
+PORTB = 0;
+PORTC = 0;
+;TIMER-------------------------------------
+T3CON = %10000100;ENABLE TIMER 1, T1CKL
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTC ' PORTC is LCD data port
+DEFINE LCD_DBIT 0 ' PORTC.0 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line         
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;----TIMER 3 SET-UP-----------------------
+i var byte
+PULSOS VAR WORD
+IN2 VAR BYTE
+X VAR BYTE;
+K VAR WORD;
+KD VAR BYTE[4]
+TMR VAR WORD;
+R var byte
+CLEAR
+;ALIAS ---
+LCDOUT $FE,$80,"A.Chavez "
+pause 1500         
+;-------------------------------------------------------------------------------
+MAIN:      
+    lcdout $fe,$80,"PULSES X"
+    lcdout $fe,$c0,"4.23 SEC "
+    PAUSE 1000;
+    HERE:
+        PORTB.4=1 ;SET HIGH Normal State
+;-----------------------------------MOTOR1--------------------------------------
+        PORTB.5=0 ;MUX Selector 0
+        PORTB.6=0
+        PORTB.7=0
+        pause 100
+        LCDOUT $FE,$80,"PULSES  ";
+        TMR3L = 0; 
+        TMR3H = 0;
+    FOR i=0 to 77
+        T3CON.0 = 1 
+        pause 55
+        TMR.BYTE0 = TMR3L; LOW REGISTER
+        TMR.BYTE1 = TMR3H; HIGH REGISTER 
+        LCDOUT $FE,$C0,DEC TMR,"       "
+    next i
+    IF TMR <= 50 THEN    ;709RPM
+                DISABLE
+                PORTB.4=0
+                PAUSE 100
+                T3CON.0 = 0
+        LCDOUT $FE,$80,"RPC"  
+        LCDOUT $FE,$C0,DEC TMR,"       "
+        PAUSE 3000
+        TMR3L = 0;
+        TMR3H = 0; 
+        ENABLE
+    ENDIF
+    PORTB.4=1
+    pause 100
+;-----------------------------------MOTOR2--------------------------------------
+    PORTB.5=1 ;MUX Selector 1
+    PORTB.6=0
+    PORTB.7=0
+    pause 100
+    LCDOUT $FE,$80,"PULSES  ";
+    TMR3L = 0; 
+    TMR3H = 0;
+    FOR i=0 to 77
+        T3CON.0 = 1 
+        pause 55
+        TMR.BYTE0 = TMR3L; LOW REGISTER
+        TMR.BYTE1 = TMR3H; HIGH REGISTER 
+        LCDOUT $FE,$C0,DEC TMR,"       "
+    next i
+    IF TMR <= 50 THEN    ;709RPM
+                DISABLE
+                PORTB.4=0
+                PAUSE 100
+                T3CON.0 = 0
+        LCDOUT $FE,$80,"RPC"  
+        LCDOUT $FE,$C0,DEC TMR,"       "
+        PAUSE 3000
+        TMR3L = 0;
+        TMR3H = 0; 
+        ENABLE
+    ENDIF
+    PORTB.4=1
+    pause 100
+;-----------------------------------MOTOR3--------------------------------------
+    PORTB.5=0 ;MUX Selector 2
+    PORTB.6=1
+    PORTB.7=0
+    pause 100
+    LCDOUT $FE,$80,"PULSES  ";
+    TMR3L = 0; 
+    TMR3H = 0;
+    FOR i=0 to 77
+        T3CON.0 = 1 
+        pause 55
+        TMR.BYTE0 = TMR3L; LOW REGISTER
+        TMR.BYTE1 = TMR3H; HIGH REGISTER 
+        LCDOUT $FE,$C0,DEC TMR,"       "
+    next i
+    IF TMR <= 50 THEN    ;709RPM
+                DISABLE
+                PORTB.4=0
+                PAUSE 100
+                T3CON.0 = 0
+        LCDOUT $FE,$80,"RPC"  
+        LCDOUT $FE,$C0,DEC TMR,"       "
+        PAUSE 3000
+        TMR3L = 0;
+        TMR3H = 0; 
+        ENABLE
+    ENDIF     
+GOTO HERE   
+;-------------------------------------------------------------------------------
