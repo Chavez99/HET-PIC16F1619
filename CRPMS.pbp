@@ -2,8 +2,8 @@
 '*  Author  : Chavez Murga Arturo Alejandro                     *
 '*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
 '*          : All Rights Reserved                               *
-'*  Date    : 3/20/2020                                         *
-'*  Version : 1.2                                               *
+'*  Date    : 5/12/2020                                         *
+'*  Version : 1.3                                               *
 '*  Notes   :                                                   *
 '*          :                                                   *
 '****************************************************************
@@ -17,18 +17,18 @@ OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
 OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
 OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY    
 ;--PORTA--
-TRISA = %00111000; RA3:RA4:RA5 AS INPUT 
-ANSELA = 0; ALL PINS ARE DIGITAL
+TRISA = 0;  
+ANSELA = 0; 
 OPTION_REG.7=0; 
-WPUA = %00011000; 
+WPUA = 0; 
 ;--PORTB--
-TRISB = 0; 
+TRISB = 0;  PORTB AS OUTPUT
 ANSELB = 0; ALL PINS ARE DIGITAL
 WPUB = 0; 
 LATB = 0
 ;--PORTC--
-TRISC = %00100000; RA5:RA6:RA7 AS INPUT
-ANSELC = 0; 
+TRISC = %10100000; RC7 AS INPUT
+ANSELC = %10000000; RC7 as analog
 WPUC = 0; 
 LATC = 0;
 ;---
@@ -50,6 +50,11 @@ DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
 DEFINE LCD_DATAUS 44 ' Use 44uS data delay
 ;----TIMER 3 SET-UP-----------------------
 i var byte
+CH var byte
+VD var byte
+VIN Var word
+ADC var word
+REMAINDER VAR WORD
 PULSOS VAR WORD
 IN2 VAR BYTE
 X VAR BYTE;
@@ -66,8 +71,27 @@ MAIN:
     lcdout $fe,$80,"PULSES X"
     lcdout $fe,$c0,"4.23 SEC "
     PAUSE 1000;
-    HERE:
+    lcdout $fe,$80,"VOLT    "
+    lcdout $fe,$c0,"--------"
+    PAUSE 1000;
+        CH = 9;CHANNEL 9
+        GOSUB ADC_READ; GO TO SEQUENCE 
+        LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
+    pause 1000
+        PORTC.6=1 ;Set indicator ON
+        pause 50
+    if VIN>37 then  ;Indicator status alarm
+        PORTB.4=0
+        FOR I=0 TO 4
+        PORTC.6=0
+        pause 300
+        PORTC.6=1
+        next i
+        PORTB.4=1
+    endif
         PORTB.4=1 ;SET HIGH Normal State
+        PORTC.6=1 ;Set indicator ON
+    HERE:
 ;-----------------------------------MOTOR1--------------------------------------
         PORTB.5=0 ;MUX Selector 0
         PORTB.6=0
@@ -84,10 +108,19 @@ MAIN:
         LCDOUT $FE,$C0,DEC TMR,"       "
     next i
     IF TMR <= 50 THEN    ;709RPM
-                DISABLE
+        DISABLE
+        PORTB.4=0
+        PAUSE 100
+            if VIN>37 then  ;Indicator status alarm
                 PORTB.4=0
-                PAUSE 100
-                T3CON.0 = 0
+                FOR I=0 TO 4
+                PORTC.6=0
+                pause 300
+                PORTC.6=1
+                next i
+                PORTB.4=1
+        endif        
+        T3CON.0 = 0
         LCDOUT $FE,$80,"RPC"  
         LCDOUT $FE,$C0,DEC TMR,"       "
         PAUSE 3000
@@ -113,10 +146,19 @@ MAIN:
         LCDOUT $FE,$C0,DEC TMR,"       "
     next i
     IF TMR <= 50 THEN    ;709RPM
-                DISABLE
+        DISABLE
+        PORTB.4=0
+        PAUSE 100
+        if VIN>37 then  ;Indicator status alarm
                 PORTB.4=0
-                PAUSE 100
-                T3CON.0 = 0
+                FOR I=0 TO 4
+                PORTC.6=0
+                pause 300
+                PORTC.6=1
+                next i
+                PORTB.4=1
+        endif
+        T3CON.0 = 0
         LCDOUT $FE,$80,"RPC"  
         LCDOUT $FE,$C0,DEC TMR,"       "
         PAUSE 3000
@@ -142,10 +184,19 @@ MAIN:
         LCDOUT $FE,$C0,DEC TMR,"       "
     next i
     IF TMR <= 50 THEN    ;709RPM
-                DISABLE
+        DISABLE
+        PORTB.4=0
+        PAUSE 100
+        if VIN>37 then  ;Indicator status alarm
                 PORTB.4=0
-                PAUSE 100
-                T3CON.0 = 0
+                FOR I=0 TO 4
+                PORTC.6=0
+                pause 300
+                PORTC.6=1
+                next i
+                PORTB.4=1
+        endif        
+        T3CON.0 = 0
         LCDOUT $FE,$80,"RPC"  
         LCDOUT $FE,$C0,DEC TMR,"       "
         PAUSE 3000
@@ -155,3 +206,20 @@ MAIN:
     ENDIF     
 GOTO HERE   
 ;-------------------------------------------------------------------------------
+ADC_READ:
+    CH = CH<<2;
+    ADCON0 = CH^%10000001; BITWISE XNOR
+    PAUSE 1
+    ADCON0.1 = 1;   
+    HERE_ADC: IF ADCON0.1 = 1 THEN HERE_ADC; STAY HERE WHILE CONVERSION IS ready
+    ADCON0.0 = 0;
+    ADC.BYTE0 = ADRESL;     SAVE LOWER REGISTER OF THE ADC IN VARIABLE VIN
+    ADC.BYTE1 = ADRESH;     SAVE HIGHER REGISTER OF THE ADC IN VARIABLE VIN
+    DISABLE
+    REMAINDER = ADC*4887;              MULTIPLYING BY RESLSB = 4.8887
+    VIN = div32 1000;              PERFORM 16-BITS DIVISION 
+    ENABLE 
+    FOR X = 0 TO 3
+        VD[X] = VIN DIG X
+    NEXT X 
+return
