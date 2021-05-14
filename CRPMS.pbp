@@ -2,7 +2,7 @@
 '*  Author  : Chavez Murga Arturo Alejandro                     *
 '*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
 '*          : All Rights Reserved                               *
-'*  Date    : 5/12/2020                                         *
+'*  Date    : 5/14/2020                                         *
 '*  Version : 1.3                                               *
 '*  Notes   :                                                   *
 '*          :                                                   *
@@ -51,7 +51,7 @@ DEFINE LCD_DATAUS 44 ' Use 44uS data delay
 ;----TIMER 3 SET-UP-----------------------
 i var byte
 CH var byte
-VD var byte
+VD VAR BYTE[4]
 VIN Var word
 ADC var word
 REMAINDER VAR WORD
@@ -64,33 +64,41 @@ TMR VAR WORD;
 R var byte
 CLEAR
 ;ALIAS ---
+WARNING var PORTB.7
+GOOD var PORTC.6
 LCDOUT $FE,$80,"A.Chavez "
 pause 1500         
 ;-------------------------------------------------------------------------------
 MAIN:      
     lcdout $fe,$80,"PULSES X"
-    lcdout $fe,$c0,"4.23 SEC "
+    lcdout $fe,$C0,"4.23 SEC "
     PAUSE 1000;
-    lcdout $fe,$80,"VOLT    "
-    lcdout $fe,$c0,"--------"
-    PAUSE 1000;
+;------------Clear Ports--------------
+        PORTB.4=0 ; State
+        GOOD=0 ;Set indicator Off
+        WARNING=0
+        vin=0
+        ADC=0
+;---------------------------
         CH = 9;CHANNEL 9
-        GOSUB ADC_READ; GO TO SEQUENCE 
+        GOSUB ADC_READ; GO TO SEQUENCE
         LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
-    pause 1000
-        PORTC.6=1 ;Set indicator ON
+        pause 1000
+        GOOD=1 ;Set indicator ON
         pause 50
     if VIN>37 then  ;Indicator status alarm
         PORTB.4=0
+        GOOD=0
+        WARNING=1
         FOR I=0 TO 4
-        PORTC.6=0
-        pause 300
-        PORTC.6=1
+            WARNING=0
+            pause 300
+            WARNING=1
         next i
-        PORTB.4=1
     endif
         PORTB.4=1 ;SET HIGH Normal State
-        PORTC.6=1 ;Set indicator ON
+        GOOD=1 ;Set good indicator ON
+        WARNING=0; Set warning indicator OFF
     HERE:
 ;-----------------------------------MOTOR1--------------------------------------
         PORTB.5=0 ;MUX Selector 0
@@ -110,15 +118,20 @@ MAIN:
     IF TMR <= 50 THEN    ;709RPM
         DISABLE
         PORTB.4=0
+        WARNING=1
+        good=0
         PAUSE 100
-            if VIN>37 then  ;Indicator status alarm
+        CH = 9;CHANNEL 9
+        GOSUB ADC_READ; GO TO SEQUENCE 
+        LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
+        pause 1000
+        if VIN>37 then  ;Indicator status alarm
                 PORTB.4=0
                 FOR I=0 TO 4
-                PORTC.6=0
-                pause 300
-                PORTC.6=1
+                    WARNING=0
+                    pause 500
+                    WARNING=1
                 next i
-                PORTB.4=1
         endif        
         T3CON.0 = 0
         LCDOUT $FE,$80,"RPC"  
@@ -129,6 +142,8 @@ MAIN:
         ENABLE
     ENDIF
     PORTB.4=1
+    GOOD=1
+    WARNING=0
     pause 100
 ;-----------------------------------MOTOR2--------------------------------------
     PORTB.5=1 ;MUX Selector 1
@@ -148,15 +163,20 @@ MAIN:
     IF TMR <= 50 THEN    ;709RPM
         DISABLE
         PORTB.4=0
+        WARNING=1
+        good=0
         PAUSE 100
+        CH = 9;CHANNEL 9
+        GOSUB ADC_READ; GO TO SEQUENCE 
+        LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
+        pause 1000
         if VIN>37 then  ;Indicator status alarm
                 PORTB.4=0
                 FOR I=0 TO 4
-                PORTC.6=0
-                pause 300
-                PORTC.6=1
+                    WARNING=0
+                    pause 500
+                    WARNING=1
                 next i
-                PORTB.4=1
         endif
         T3CON.0 = 0
         LCDOUT $FE,$80,"RPC"  
@@ -167,6 +187,8 @@ MAIN:
         ENABLE
     ENDIF
     PORTB.4=1
+    GOOD=1
+    WARNING=0
     pause 100
 ;-----------------------------------MOTOR3--------------------------------------
     PORTB.5=0 ;MUX Selector 2
@@ -186,15 +208,20 @@ MAIN:
     IF TMR <= 50 THEN    ;709RPM
         DISABLE
         PORTB.4=0
+        good=0
+        WARNING=1
         PAUSE 100
+        CH = 9;CHANNEL 9
+        GOSUB ADC_READ; GO TO SEQUENCE 
+        LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
+        pause 1000
         if VIN>37 then  ;Indicator status alarm
                 PORTB.4=0
                 FOR I=0 TO 4
-                PORTC.6=0
-                pause 300
-                PORTC.6=1
+                    WARNING=0
+                    pause 500
+                    WARNING=1
                 next i
-                PORTB.4=1
         endif        
         T3CON.0 = 0
         LCDOUT $FE,$80,"RPC"  
@@ -203,23 +230,27 @@ MAIN:
         TMR3L = 0;
         TMR3H = 0; 
         ENABLE
-    ENDIF     
+    ENDIF
+    PORTB.4=1
+    GOOD=1
+    WARNING=0
+    pause 100     
 GOTO HERE   
 ;-------------------------------------------------------------------------------
 ADC_READ:
-    CH = CH<<2;
-    ADCON0 = CH^%10000001; BITWISE XNOR
-    PAUSE 1
-    ADCON0.1 = 1;   
-    HERE_ADC: IF ADCON0.1 = 1 THEN HERE_ADC; STAY HERE WHILE CONVERSION IS ready
-    ADCON0.0 = 0;
-    ADC.BYTE0 = ADRESL;     SAVE LOWER REGISTER OF THE ADC IN VARIABLE VIN
-    ADC.BYTE1 = ADRESH;     SAVE HIGHER REGISTER OF THE ADC IN VARIABLE VIN
-    DISABLE
-    REMAINDER = ADC*4887;              MULTIPLYING BY RESLSB = 4.8887
-    VIN = div32 1000;              PERFORM 16-BITS DIVISION 
-    ENABLE 
-    FOR X = 0 TO 3
-        VD[X] = VIN DIG X
-    NEXT X 
+CH = CH<<2;
+ADCON0 = CH^%10000001; BITWISE XNOR
+PAUSE 1
+ADCON0.1 = 1;
+HERE_ADC: IF ADCON0.1 = 1 THEN HERE_ADC; STAY HERE WHILE CONVERSION IS ready
+ADCON0.0 = 0;
+ADC.BYTE0 = ADRESL; SAVE LOWER REGISTER OF THE ADC IN VARIABLE VIN
+ADC.BYTE1 = ADRESH; SAVE HIGHER REGISTER OF THE ADC IN VARIABLE VIN
+DISABLE
+REMAINDER = ADC*4887; MULTIPLYING BY RESLSB = 4.8887
+VIN = div32 1000; PERFORM 16-BITS DIVISION
+ENABLE
+FOR X = 0 TO 3
+    VD[X] = VIN DIG X
+NEXT X
 return
