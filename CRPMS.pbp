@@ -89,7 +89,7 @@ MAIN:
         pause 1000
         GOOD=1 ;Set indicator ON
         pause 50
-    if VIN>37 then  ;Indicator status alarm
+    if VIN>614 then  ;Indicator status alarm
         PORTB.4=0
         GOOD=0
         WARNING=1
@@ -128,7 +128,7 @@ MAIN:
         GOSUB ADC_READ; GO TO SEQUENCE 
         LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
         pause 1000
-        if VIN>37 then  ;Indicator status alarm
+        if VIN>614 then  ;Indicator status alarm
                 PORTB.4=0
                 FOR I=0 TO 4
                     WARNING=0
@@ -173,7 +173,7 @@ MAIN:
         GOSUB ADC_READ; GO TO SEQUENCE 
         LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
         pause 1000
-        if VIN>37 then  ;Indicator status alarm
+        if VIN>614 then  ;Indicator status alarm
                 PORTB.4=0
                 FOR I=0 TO 4
                     WARNING=0
@@ -218,7 +218,7 @@ MAIN:
         GOSUB ADC_READ; GO TO SEQUENCE 
         LCDOUT $FE,$C0,"V=",DEC VD[3],".",DEC VD[2],DEC VD[1],DEC VD[0]," "
         pause 1000
-        if VIN>37 then  ;Indicator status alarm
+        if VIN>614 then  ;Indicator status alarm
                 PORTB.4=0
                 FOR I=0 TO 4
                     WARNING=0
