@@ -67,7 +67,10 @@ CLEAR
 WARNING var PORTB.7
 GOOD var PORTC.6
 LCDOUT $FE,$80,"A.Chavez "
-pause 1500         
+pause 1500 
+;-------------------------------ADCON0------------------------------------------
+ADCON0 = %00001101;ADC ENABLED
+ADCON1 = %10000000; RIGHT JUSTIFIED
 ;-------------------------------------------------------------------------------
 MAIN:      
     lcdout $fe,$80,"PULSES X"
